@@ -6,10 +6,7 @@
         android:id="@+id/item_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        custom:childSize="44px"
-        custom:fromDegrees="270.0"
-        custom:toDegrees="360.0" />
+        android:layout_centerInParent="true" />
 
     <FrameLayout
         android:id="@+id/control_layout"

@@ -39,6 +39,7 @@ public class RayMenu extends RelativeLayout {
 		li.inflate(R.layout.ray_menu, this);
 
 		mRayLayout = (RayLayout) findViewById(R.id.item_layout);
+		mRayLayout.setChildSize(60);
 
 		final ViewGroup controlLayout = (ViewGroup) findViewById(R.id.control_layout);
 		controlLayout.setClickable(true);

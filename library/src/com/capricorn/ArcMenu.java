@@ -19,6 +19,8 @@ package com.capricorn;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -30,6 +32,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.RotateAnimation;
 import android.view.animation.ScaleAnimation;
 import android.view.animation.Animation.AnimationListener;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
@@ -44,6 +47,10 @@ public class ArcMenu extends RelativeLayout {
     private ArcLayout mArcLayout;
 
     private ImageView mHintView;
+    
+    public ViewGroup controlLayout;
+    
+    private LayoutParams params;
 
     public ArcMenu(Context context) {
         super(context);
@@ -55,16 +62,173 @@ public class ArcMenu extends RelativeLayout {
         init(context);
         applyAttrs(attrs);
     }
+    
+    /* fas nambah*/
+    
+    private int mMenuMode = -1;
+	public static final int FAN = 0;
+	public static final int RAINBOW = 1;
+	public static final int UPWARD = 2;
+	public static final int CUSTOM = 3;
+	
+	private int mX, mY;
+	private int baseWidth, baseHeight;
+	private int childSize, childCount;
+	private View v;
+    
+    public ArcMenu(Context context, int menuMode, ArcLayout layout, int x, int y, int baseWidth, int baseHeight, int childSize) {
+    	super(context);
+    	mX = x;
+    	mY = y;
+    	this.baseWidth = baseWidth;
+    	this.baseHeight = baseHeight;
+    	setChildSize(childSize);
+    	mMenuMode = menuMode;
+    	init(context);
+    	applyArcLayout(layout);
+    }
+    
+    public ArcMenu(Context context, int menuMode, int x, int y, int baseWidth, int baseHeight, int childSize) {
+    	super(context);
+    	mX = x;
+    	mY = y;
+    	this.baseWidth = baseWidth;
+    	this.baseHeight = baseHeight;
+    	setChildSize(childSize);
+    	mMenuMode = menuMode;
+    	init(context);
+    	applyLayout(menuMode);
+    }
+    
+    public ArcMenu(Context context, int menuMode, View view, int baseWidth, int baseHeight, int childSize, int childCount) {
+    	super(context);
+    	removeAllViews();
+    	mX = view.getLeft() + (view.getWidth()/2);
+    	mY = view.getTop() + (view.getHeight()/2);
+    	v = view;
+    	this.baseWidth = baseWidth;
+    	this.baseHeight = baseHeight;
+    	setChildSize(childSize);
+    	this.childCount = childCount;
+    	mMenuMode = menuMode;
+    	init(context);
+    	applyLayout(menuMode);
+    }
+    
+    public ArcMenu(Context context, ArcLayout layout, View view, int baseWidth, int baseHeight, int childCount) {
+    	super(context);
+    	removeAllViews();
+    	mX = view.getLeft() + (view.getWidth()/2);
+    	mY = view.getTop() + (view.getHeight()/2);
+    	v = view;
+    	this.baseWidth = baseWidth;
+    	this.baseHeight = baseHeight;
+    	this.childCount = childCount;
+    	mMenuMode = CUSTOM;
+    	init(context);
+    	applyArcLayout(layout);
+    }
+    
+    private void applyLayoutParams () {
+    	params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    	switch (mMenuMode) {
+    	case FAN:
+    		params.leftMargin = mX - (controlLayout.getMeasuredWidth()/2);
+            params.topMargin = mY - (controlLayout.getMeasuredHeight()/2) - mArcLayout.getMeasuredHeight();
+            break;
+    	case RAINBOW:
+    		int padding = (mArcLayout.getChildPadding() + mArcLayout.getLayoutPadding()) * (childCount+1);
+    		params.leftMargin = mX - ((childSize*childCount)/2) - padding/*mArcLayout.getMeasuredWidth()*/;
+//            params.bottomMargin = baseHeight - mY;
+    		Log.d(childSize+"."+childCount,"test"+(childSize*childCount)+" measure"+mArcLayout.getMeasuredWidth()+"/"+mArcLayout.getMeasuredHeight());
+    		params.topMargin = mY - ((childSize*childCount)/2) + /*mArcLayout.getMeasuredHeight()*/ - (controlLayout.getMeasuredHeight());
+    		break;
+    	case -1 :
+			params.leftMargin = mX;
+			params.topMargin = mY;
+    		break;	
+    	}
+    	Log.d("2",params.bottomMargin+".."+((View)mArcLayout.getParent()).getWidth());
+    }
+    
+    private void applyLayout(int menuMode) {
+    	switch (menuMode) {
+    	case FAN:
+    		mArcLayout.setArc(270.0f, 360.0f);
+    		break;
+    	case RAINBOW:
+    		mArcLayout.setArc(210.0f, 330.0f);
+    		break;
+    	}
+    	mArcLayout.setChildSize(childSize);
+    }
+    
+    public void setChildSize(int childSize) {
+    	this.childSize = childSize;
+    }
+    
+    public void opencloseItem() {
+    	mHintView.startAnimation(createHintSwitchAnimation(mArcLayout.isExpanded()));
+		mArcLayout.switchState(true);
+		Log.d("","after open item:"+mArcLayout.getMeasuredWidth());
+    }
+    
+    public boolean isItemExpanded() {
+    	return mArcLayout.isExpanded();
+    }
+    
+    /* end of fas nambah */
 
     private void init(Context context) {
         LayoutInflater li = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         li.inflate(R.layout.arc_menu, this);
 
         mArcLayout = (ArcLayout) findViewById(R.id.item_layout);
+        controlLayout = (ViewGroup) findViewById(R.id.control_layout);
 
-        final ViewGroup controlLayout = (ViewGroup) findViewById(R.id.control_layout);
+        /* fas */
+        mArcLayout.measure(0, 0);
+        controlLayout.measure(0, 0);
+        applyLayoutParams();
+        
+        LayoutParams test = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        switch (mMenuMode) {
+        case FAN:
+        	test.leftMargin = params.leftMargin;
+        	test.topMargin = mY - controlLayout.getMeasuredHeight();
+        	break;
+        case RAINBOW:
+        	test.leftMargin = /*mX - controlLayout.getMeasuredWidth()*/ v.getLeft();
+            test.topMargin = /*params.topMargin + mArcLayout.getRadius()*//*mY - controlLayout.getMeasuredHeight()*/ v.getTop();
+            break;
+        }
+        
+        /*v.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				if(mArcLayout.isExpanded()) 
+					openItem();
+			}
+		});*/
+        /* eof */
+        
+        mArcLayout.setLayoutParams(params);
+
         controlLayout.setClickable(true);
-        controlLayout.setOnTouchListener(new OnTouchListener() {
+        controlLayout.setLayoutParams(test);
+        controlLayout.setVisibility(View.GONE);
+        controlLayout.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View arg0) {
+				Log.d("click","click");
+				if(mArcLayout.isExpanded()) 
+					opencloseItem();
+			}
+		});
+
+        /*controlLayout.setOnTouchListener(new OnTouchListener() {
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -75,7 +239,7 @@ public class ArcMenu extends RelativeLayout {
 
                 return false;
             }
-        });
+        });*/
 
         mHintView = (ImageView) findViewById(R.id.control_hint);
     }
@@ -94,6 +258,11 @@ public class ArcMenu extends RelativeLayout {
 
             a.recycle();
         }
+    }
+    
+    private void applyArcLayout(ArcLayout layout) {
+    	mArcLayout.setArc(layout.getStartDegree(), layout.getEndDegree());
+    	mArcLayout.setChildSize(layout.getChildSize());
     }
 
     public void addItem(View item, OnClickListener listener) {
@@ -150,7 +319,7 @@ public class ArcMenu extends RelativeLayout {
     }
 
     private Animation bindItemAnimation(final View child, final boolean isClicked, final long duration) {
-        Animation animation = createItemDisapperAnimation(duration, isClicked);
+        Animation animation = createItemDisapperAnimation(duration, isClicked, mArcLayout);
         child.setAnimation(animation);
 
         return animation;
@@ -162,11 +331,11 @@ public class ArcMenu extends RelativeLayout {
             View item = mArcLayout.getChildAt(i);
             item.clearAnimation();
         }
-
+        mArcLayout.removeAllViews();
         mArcLayout.switchState(false);
     }
 
-    private static Animation createItemDisapperAnimation(final long duration, final boolean isClicked) {
+    private static Animation createItemDisapperAnimation(final long duration, final boolean isClicked, ArcLayout mArcLayout) {
         AnimationSet animationSet = new AnimationSet(true);
         animationSet.addAnimation(new ScaleAnimation(1.0f, isClicked ? 2.0f : 0.0f, 1.0f, isClicked ? 2.0f : 0.0f,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f));
@@ -175,7 +344,7 @@ public class ArcMenu extends RelativeLayout {
         animationSet.setDuration(duration);
         animationSet.setInterpolator(new DecelerateInterpolator());
         animationSet.setFillAfter(true);
-
+        
         return animationSet;
     }
 

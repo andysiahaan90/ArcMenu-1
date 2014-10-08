@@ -18,11 +18,14 @@ package com.capricorn;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
+import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.Interpolator;
@@ -68,6 +71,31 @@ public class ArcLayout extends ViewGroup {
     public ArcLayout(Context context) {
         super(context);
     }
+    
+    /* fas */
+    public int getRadius() {
+    	Log.d("","get radius:"+mRadius);
+    	return mRadius;
+    }
+    
+    int mFrameWidth, mFrameHeight;
+    
+    public int getFrameWidth() {
+    	return mFrameWidth;
+    }
+    
+    public int getFrameHeight() {
+    	return mFrameHeight;
+    }
+    
+    public int getChildPadding() {
+    	return mChildPadding;
+    }
+    
+    public int getLayoutPadding() {
+    	return mLayoutPadding;
+    }
+    /*eof*/
 
     public ArcLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -111,10 +139,11 @@ public class ArcLayout extends ViewGroup {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         final int radius = mRadius = computeRadius(Math.abs(mToDegrees - mFromDegrees), getChildCount(), mChildSize,
                 mChildPadding, MIN_RADIUS);
-        final int size = radius * 2 + mChildSize + mChildPadding + mLayoutPadding * 2;
-
+        final int size = radius * 2 + mChildSize + mChildPadding * 2 + mLayoutPadding * 2;
+        Log.d("size:"+size,"measure r:"+radius+" childsize:"+mChildSize);
+        
         setMeasuredDimension(size, size);
-
+        
         final int count = getChildCount();
         for (int i = 0; i < count; i++) {
             getChildAt(i).measure(MeasureSpec.makeMeasureSpec(mChildSize, MeasureSpec.EXACTLY),
@@ -164,7 +193,8 @@ public class ArcLayout extends ViewGroup {
 
     private static Animation createExpandAnimation(float fromXDelta, float toXDelta, float fromYDelta, float toYDelta,
             long startOffset, long duration, Interpolator interpolator) {
-        Animation animation = new RotateAndTranslateAnimation(0, toXDelta, 0, toYDelta, 0, 720);
+    	Animation animation = new RotateAndTranslateAnimation(fromXDelta, 0, -1*toYDelta, toYDelta<0 ? 0: toYDelta, 0, 720);
+    	Log.d("expand","x:"+fromXDelta+":"+ (toXDelta<0 ? 0 : toXDelta)+" y:"+ (-1*toYDelta)+":"+(toYDelta<0 ? 0: toYDelta));
         animation.setStartOffset(startOffset);
         animation.setDuration(duration);
         animation.setInterpolator(interpolator);
@@ -195,7 +225,7 @@ public class ArcLayout extends ViewGroup {
         translateAnimation.setFillAfter(true);
 
         animationSet.addAnimation(translateAnimation);
-
+        
         return animationSet;
     }
 
@@ -208,15 +238,19 @@ public class ArcLayout extends ViewGroup {
         final int childCount = getChildCount();
         final float perDegrees = (mToDegrees - mFromDegrees) / (childCount - 1);
         Rect frame = computeChildFrame(centerX, centerY, radius, mFromDegrees + index * perDegrees, mChildSize);
-
+        
         final int toXDelta = frame.left - child.getLeft();
         final int toYDelta = frame.top - child.getTop();
+        final int fromXDelta = -1*toXDelta - (radius/2);
+        
+        Log.d(""+mRadius,"centerX:"+centerX+" centerY:"+centerY+" frame:"+frame.left+"."+frame.right+"."+frame.top+" cleft:"+child.getLeft()+"."+child.getTop());
 
         Interpolator interpolator = mExpanded ? new AccelerateInterpolator() : new OvershootInterpolator(1.5f);
         final long startOffset = computeStartOffset(childCount, mExpanded, index, 0.1f, duration, interpolator);
+        Log.d("","to x:"+toXDelta+" to y:"+toYDelta+" offset:"+startOffset);
 
         Animation animation = mExpanded ? createShrinkAnimation(0, toXDelta, 0, toYDelta, startOffset, duration,
-                interpolator) : createExpandAnimation(0, toXDelta, 0, toYDelta, startOffset, duration, interpolator);
+                interpolator) : createExpandAnimation(fromXDelta, toXDelta>frame.right ? frame.right : toXDelta, 0, toYDelta, startOffset, duration, interpolator);
 
         final boolean isLast = getTransformedIndex(expanded, childCount, index) == childCount - 1;
         animation.setAnimationListener(new AnimationListener() {
@@ -239,6 +273,8 @@ public class ArcLayout extends ViewGroup {
                         @Override
                         public void run() {
                             onAllAnimationsEnd();
+                            if(!mExpanded)
+                            	removeAllViews();
                         }
                     }, 0);
                 }
@@ -261,6 +297,14 @@ public class ArcLayout extends ViewGroup {
         mToDegrees = toDegrees;
 
         requestLayout();
+    }
+    
+    public float getStartDegree() {
+    	return mFromDegrees;
+    }
+    
+    public float getEndDegree() {
+    	return mToDegrees;
     }
 
     public void setChildSize(int size) {

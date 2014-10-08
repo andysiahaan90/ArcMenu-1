@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Rect;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
@@ -26,7 +27,8 @@ public class RayLayout extends ViewGroup {
 	private int mChildGap;
 
 	/* left space to place the switch button */
-	private int mLeftHolderWidth;
+//	private int mLeftHolderWidth;
+	private int mBottomHolderHeight;
 
 	private boolean mExpanded = false;
 
@@ -43,40 +45,40 @@ public class RayLayout extends ViewGroup {
 			a.recycle();
 
 			a = getContext().obtainStyledAttributes(attrs, R.styleable.RayLayout, 0, 0);
-			mLeftHolderWidth = Math.max(a.getDimensionPixelSize(R.styleable.RayLayout_leftHolderWidth, 0), 0);
+			mBottomHolderHeight = Math.max(a.getDimensionPixelSize(R.styleable.RayLayout_leftHolderWidth, 0), 0);
 			a.recycle();
 
 		}
 	}
 
-	private static int computeChildGap(final float width, final int childCount, final int childSize, final int minGap) {
-		return Math.max((int) (width / childCount - childSize), minGap);
+	private static int computeChildGap(final float height, final int childCount, final int childSize, final int minGap) {
+		return Math.max((int) (height / childCount - childSize), minGap);
 	}
 
-	private static Rect computeChildFrame(final boolean expanded, final int paddingLeft, final int childIndex,
+	private static Rect computeChildFrame(final boolean expanded, final int paddingBottom, final int childIndex,
 			final int gap, final int size) {
-		final int left = expanded ? (paddingLeft + childIndex * (gap + size) + gap) : ((paddingLeft - size) / 2);
+		final int bottom = expanded ? (paddingBottom + childIndex * (gap + size) + gap) : ((paddingBottom - size) / 2);
 
-		return new Rect(left, 0, left + size, size);
+		return new Rect(0, bottom+size, size, bottom);
 	}
 
 	@Override
 	protected int getSuggestedMinimumHeight() {
-		return mChildSize;
+		return mBottomHolderHeight + mChildSize * getChildCount();
 	}
 
 	@Override
 	protected int getSuggestedMinimumWidth() {
-		return mLeftHolderWidth + mChildSize * getChildCount();
+		return mChildSize;
 	}
 
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-		super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(getSuggestedMinimumHeight(), MeasureSpec.EXACTLY));
+		super.onMeasure(MeasureSpec.makeMeasureSpec(getSuggestedMinimumWidth(), MeasureSpec.EXACTLY), heightMeasureSpec);
 
 		final int count = getChildCount();
-		mChildGap = computeChildGap(getMeasuredWidth() - mLeftHolderWidth, count, mChildSize, 0);
-
+		mChildGap = computeChildGap(getMeasuredHeight() - mBottomHolderHeight, count, mChildSize, 0);
+		Log.d("gap",mChildGap+"");
 		for (int i = 0; i < count; i++) {
 			getChildAt(i).measure(MeasureSpec.makeMeasureSpec(mChildSize, MeasureSpec.EXACTLY),
 					MeasureSpec.makeMeasureSpec(mChildSize, MeasureSpec.EXACTLY));
@@ -85,11 +87,11 @@ public class RayLayout extends ViewGroup {
 
 	@Override
 	protected void onLayout(boolean changed, int l, int t, int r, int b) {
-		final int paddingLeft = mLeftHolderWidth;
+		final int paddingBottom = mBottomHolderHeight;
 		final int childCount = getChildCount();
 
 		for (int i = 0; i < childCount; i++) {
-			Rect frame = computeChildFrame(mExpanded, paddingLeft, i, mChildGap, mChildSize);
+			Rect frame = computeChildFrame(mExpanded, paddingBottom, i, mChildGap, mChildSize);
 			getChildAt(i).layout(frame.left, frame.top, frame.right, frame.bottom);
 		}
 
@@ -154,7 +156,7 @@ public class RayLayout extends ViewGroup {
 	private void bindChildAnimation(final View child, final int index, final long duration) {
 		final boolean expanded = mExpanded;
 		final int childCount = getChildCount();
-		Rect frame = computeChildFrame(!expanded, mLeftHolderWidth, index, mChildGap, mChildSize);
+		Rect frame = computeChildFrame(!expanded, mBottomHolderHeight, index, mChildGap, mChildSize);
 
 		final int toXDelta = frame.left - child.getLeft();
 		final int toYDelta = frame.top - child.getTop();
