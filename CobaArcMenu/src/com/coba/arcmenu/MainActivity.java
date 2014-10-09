@@ -7,6 +7,7 @@ import com.capricorn.RayMenu;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -74,7 +75,7 @@ public class MainActivity extends Activity {
 			@Override
 			public boolean onLongClick(View v) {
 				final int itemCount = ITEM_DRAWABLES.length;
-				final int childSize = 100;
+				final int childSize = dpToPx(70);
 				rlBase.removeView(arcMenu);
 				arcMenu = new ArcMenu(MainActivity.this, ArcMenu.RAINBOW, ivButton, rlBase.getWidth(), rlBase.getHeight(), childSize, itemCount);
 
@@ -87,7 +88,7 @@ public class MainActivity extends Activity {
 
 		                @Override
 		                public void onClick(View v) {
-		                    Toast.makeText(MainActivity.this, "position:" + position, Toast.LENGTH_SHORT).show();
+		                    Toast.makeText(MainActivity.this, childSize+" position:" + position, Toast.LENGTH_SHORT).show();
 		                }
 		            });
 		        }
@@ -98,5 +99,14 @@ public class MainActivity extends Activity {
 		});
 		
 	}
+	
+	private int dpToPx(int dp)  {
+    	DisplayMetrics displayMetrics = MainActivity.this.getResources().getDisplayMetrics();
+        return (int) ((dp*displayMetrics.density)+0.5);
+        
+//        float density = mContext.getResources().getDisplayMetrics().density;
+//        return Math.round((float)dp * density);
+//    	return dp;
+    }
 
 }

@@ -16,9 +16,13 @@
 
 package com.capricorn;
 
+
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.os.Handler;
+import android.os.Message;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -75,6 +79,7 @@ public class ArcMenu extends RelativeLayout {
 	private int baseWidth, baseHeight;
 	private int childSize, childCount;
 	private View v;
+	private Context mContext;
     
     public ArcMenu(Context context, int menuMode, ArcLayout layout, int x, int y, int baseWidth, int baseHeight, int childSize) {
     	super(context);
@@ -102,7 +107,7 @@ public class ArcMenu extends RelativeLayout {
     
     public ArcMenu(Context context, int menuMode, View view, int baseWidth, int baseHeight, int childSize, int childCount) {
     	super(context);
-    	removeAllViews();
+    	mContext = context;
     	mX = view.getLeft() + (view.getWidth()/2);
     	mY = view.getTop() + (view.getHeight()/2);
     	v = view;
@@ -117,7 +122,6 @@ public class ArcMenu extends RelativeLayout {
     
     public ArcMenu(Context context, ArcLayout layout, View view, int baseWidth, int baseHeight, int childCount) {
     	super(context);
-    	removeAllViews();
     	mX = view.getLeft() + (view.getWidth()/2);
     	mY = view.getTop() + (view.getHeight()/2);
     	v = view;
@@ -137,12 +141,25 @@ public class ArcMenu extends RelativeLayout {
             params.topMargin = mY - (controlLayout.getMeasuredHeight()/2) - mArcLayout.getMeasuredHeight();
             break;
     	case RAINBOW:
+    		/*int padding = (mArcLayout.getChildPadding() + mArcLayout.getLayoutPadding()) * (childCount+1);
+    		params.leftMargin = mX - (dpToPx(measuredSize)) - (padding/2);
+    		params.topMargin = mY - (dpToPx(measuredSize)) - (padding/2);
+    		Log.d("","mx:"+mX + " my:"+mY + "size:"+measuredSize+" margin:"+params.leftMargin+"/"+params.topMargin);
+    		break;*/
     		int padding = (mArcLayout.getChildPadding() + mArcLayout.getLayoutPadding()) * (childCount+1);
     		params.leftMargin = mX - ((childSize*childCount)/2) - padding/*mArcLayout.getMeasuredWidth()*/;
+    		Log.d("", "mx"+mX+" size*count"+((childSize*childCount)/2)+" padding"+padding+" margin"+params.leftMargin);
+    		Log.d(childSize+"."+childCount,"test"+(childSize*childCount)+" measure"+mArcLayout.getMeasuredWidth()+"/"+mArcLayout.getMeasuredHeight());
+    		params.topMargin = mY - ((childSize*childCount)/2) /*+ mArcLayout.getMeasuredHeight()*/ - (controlLayout.getMeasuredHeight());
+    		break;
+    		/*int padding = ((dpToPx(mArcLayout.getChildPadding())*(childCount+1)) + (dpToPx(mArcLayout.getLayoutPadding())*2));
+    		params.leftMargin = mX - ((childSize*childCount)/2) - ((padding)/2)mArcLayout.getMeasuredWidth();
+    		params.leftMargin = params.leftMargin;
 //            params.bottomMargin = baseHeight - mY;
     		Log.d(childSize+"."+childCount,"test"+(childSize*childCount)+" measure"+mArcLayout.getMeasuredWidth()+"/"+mArcLayout.getMeasuredHeight());
-    		params.topMargin = mY - ((childSize*childCount)/2) + /*mArcLayout.getMeasuredHeight()*/ - (controlLayout.getMeasuredHeight());
-    		break;
+    		params.topMargin = mY - ((childSize*childCount)/2) + mArcLayout.getMeasuredHeight() - controlLayout.getMeasuredHeight();
+    		params.topMargin = params.topMargin;
+    		break;*/
     	case -1 :
 			params.leftMargin = mX;
 			params.topMargin = mY;
@@ -177,6 +194,17 @@ public class ArcMenu extends RelativeLayout {
     	return mArcLayout.isExpanded();
     }
     
+    int measuredSize;
+    Handler h = new Handler(){
+    	@Override
+    	public void handleMessage(Message msg) {
+    		Log.d("","handler"+msg.arg1);
+    		measuredSize = msg.arg1;
+    		applyLayoutParams();
+    		mArcLayout.setLayoutParams(params);
+    	}
+    };
+    
     /* end of fas nambah */
 
     private void init(Context context) {
@@ -187,9 +215,21 @@ public class ArcMenu extends RelativeLayout {
         controlLayout = (ViewGroup) findViewById(R.id.control_layout);
 
         /* fas */
-        mArcLayout.measure(0, 0);
-        controlLayout.measure(0, 0);
-        applyLayoutParams();
+        
+        Runnable runnable = new Runnable() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				mArcLayout.measure(0, 0);
+				Message msg = new Message();
+				msg.arg1 = mArcLayout.getMeasuredWidth();
+		        controlLayout.measure(0, 0);
+		        h.sendMessage(msg);
+			}
+		};
+		Thread t = new Thread(runnable);
+		t.start();
         
         LayoutParams test = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         switch (mMenuMode) {
@@ -198,8 +238,8 @@ public class ArcMenu extends RelativeLayout {
         	test.topMargin = mY - controlLayout.getMeasuredHeight();
         	break;
         case RAINBOW:
-        	test.leftMargin = /*mX - controlLayout.getMeasuredWidth()*/ v.getLeft();
-            test.topMargin = /*params.topMargin + mArcLayout.getRadius()*//*mY - controlLayout.getMeasuredHeight()*/ v.getTop();
+        	test.leftMargin = /*mX - controlLayout.getMeasuredWidth()*/ dpToPx(v.getLeft());
+            test.topMargin = /*params.topMargin + mArcLayout.getRadius()*//*mY - controlLayout.getMeasuredHeight()*/ dpToPx(v.getTop());
             break;
         }
         
@@ -212,8 +252,6 @@ public class ArcMenu extends RelativeLayout {
 			}
 		});*/
         /* eof */
-        
-        mArcLayout.setLayoutParams(params);
 
         controlLayout.setClickable(true);
         controlLayout.setLayoutParams(test);
@@ -243,7 +281,16 @@ public class ArcMenu extends RelativeLayout {
 
         mHintView = (ImageView) findViewById(R.id.control_hint);
     }
-
+    
+    private int dpToPx(int dp)  {
+//    	DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
+//        return (int) ((dp*displayMetrics.density)+0.5);
+        
+//        float density = mContext.getResources().getDisplayMetrics().density;
+//        return Math.round((float)dp * density);
+    	return dp;
+    }
+    
     private void applyAttrs(AttributeSet attrs) {
         if (attrs != null) {
             TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.ArcLayout, 0, 0);

@@ -21,6 +21,7 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -62,6 +63,8 @@ public class ArcLayout extends ViewGroup {
     private float mToDegrees = DEFAULT_TO_DEGREES;
 
     private static final int MIN_RADIUS = 100;
+    
+    private static Context mContext;
 
     /* the distance between the layout's center and any child's center */
     private int mRadius;
@@ -70,6 +73,7 @@ public class ArcLayout extends ViewGroup {
 
     public ArcLayout(Context context) {
         super(context);
+        mContext = context;
     }
     
     /* fas */
@@ -99,6 +103,8 @@ public class ArcLayout extends ViewGroup {
 
     public ArcLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
+        
+        mContext = context;
 
         if (attrs != null) {
             TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.ArcLayout, 0, 0);
@@ -110,11 +116,15 @@ public class ArcLayout extends ViewGroup {
         }
     }
 
-    private static int computeRadius(final float arcDegrees, final int childCount, final int childSize,
-            final int childPadding, final int minRadius) {
+    private static int computeRadius(final float arcDegrees, final int childCount, int childSize,
+             int childPadding, int minRadius) {
         if (childCount < 2) {
             return minRadius;
         }
+        
+        childSize = childSize;
+        childPadding = dpToPx(childPadding);
+        minRadius = minRadius;
 
         final float perDegrees = arcDegrees / (childCount - 1);
         final float perHalfDegrees = perDegrees / 2;
@@ -125,10 +135,13 @@ public class ArcLayout extends ViewGroup {
         return Math.max(radius, minRadius);
     }
 
-    private static Rect computeChildFrame(final int centerX, final int centerY, final int radius, final float degrees,
-            final int size) {
+    private static Rect computeChildFrame(int centerX, int centerY, int radius, final float degrees,
+            int size) {
 
-        final double childCenterX = centerX + radius * Math.cos(Math.toRadians(degrees));
+    	radius = dpToPx(radius);
+    	size = dpToPx(size);
+    	
+        final double childCenterX =   centerX + radius * Math.cos(Math.toRadians(degrees));
         final double childCenterY = centerY + radius * Math.sin(Math.toRadians(degrees));
 
         return new Rect((int) (childCenterX - size / 2), (int) (childCenterY - size / 2),
@@ -139,7 +152,7 @@ public class ArcLayout extends ViewGroup {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         final int radius = mRadius = computeRadius(Math.abs(mToDegrees - mFromDegrees), getChildCount(), mChildSize,
                 mChildPadding, MIN_RADIUS);
-        final int size = radius * 2 + mChildSize + mChildPadding * 2 + mLayoutPadding * 2;
+        final int size = radius * 2 +mChildSize + dpToPx(mChildPadding) * 2 + dpToPx(mLayoutPadding) * 2;
         Log.d("size:"+size,"measure r:"+radius+" childsize:"+mChildSize);
         
         setMeasuredDimension(size, size);
@@ -153,8 +166,8 @@ public class ArcLayout extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        final int centerX = getWidth() / 2;
-        final int centerY = getHeight() / 2;
+        final int centerX = dpToPx(getWidth()) / 2;
+        final int centerY = dpToPx(getHeight()) / 2;
         final int radius = mExpanded ? mRadius : 0;
 
         final int childCount = getChildCount();
@@ -163,7 +176,7 @@ public class ArcLayout extends ViewGroup {
         float degrees = mFromDegrees;
         for (int i = 0; i < childCount; i++) {
             Rect frame = computeChildFrame(centerX, centerY, radius, degrees, mChildSize);
-            degrees += perDegrees;
+            degrees += perDegrees; 	
             getChildAt(i).layout(frame.left, frame.top, frame.right, frame.bottom);
         }
     }
@@ -239,8 +252,8 @@ public class ArcLayout extends ViewGroup {
         final float perDegrees = (mToDegrees - mFromDegrees) / (childCount - 1);
         Rect frame = computeChildFrame(centerX, centerY, radius, mFromDegrees + index * perDegrees, mChildSize);
         
-        final int toXDelta = frame.left - child.getLeft();
-        final int toYDelta = frame.top - child.getTop();
+        final int toXDelta = frame.left - (child.getLeft());
+        final int toYDelta = frame.top - (child.getTop());
         final int fromXDelta = -1*toXDelta - (radius/2);
         
         Log.d(""+mRadius,"centerX:"+centerX+" centerY:"+centerY+" frame:"+frame.left+"."+frame.right+"."+frame.top+" cleft:"+child.getLeft()+"."+child.getTop());
@@ -350,6 +363,16 @@ public class ArcLayout extends ViewGroup {
         }
 
         requestLayout();
+    }
+    
+    private static int dpToPx(int dp)
+    {
+//    	DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
+//        return (int) ((dp*displayMetrics.density)+0.5);
+        
+//        float density = mContext.getResources().getDisplayMetrics().density;
+//        return Math.round((float)dp * density);
+    	return dp;
     }
 
 }
